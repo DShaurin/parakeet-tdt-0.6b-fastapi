@@ -2,8 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
+temp_uploads/
+models/
+.DS_Store
+server.log
+benchmark_results/
+venv/
+.env
+.idea/
+.vscode/
 env/
 build/
 develop-eggs/

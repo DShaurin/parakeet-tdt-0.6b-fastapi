@@ -563,10 +563,48 @@
         </div>
 
         <div class="loading-container" id="loadingBar">
-            <div class="subtitle" style="margin-bottom: 0.5rem; font-size: 0.9rem;">Neural Processing In Progress...
+            <div class="subtitle" style="margin-bottom: 1rem; font-size: 1rem;" id="progressText">Neural Processing In
+                Progress...</div>
+
+            <!-- Main Progress Bar -->
+            <div class="loading-bar" style="height: 8px; margin-bottom: 1.5rem;">
+                <div class="loading-progress" id="progressBar"
+                    style="width: 0%; animation: none; transition: width 0.3s; height: 100%;"></div>
             </div>
-            <div class="loading-bar">
-                <div class="loading-progress"></div>
+
+            <!-- Resource Monitoring -->
+            <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+                <!-- CPU Usage -->
+                <div style="text-align: center; min-width: 120px;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">CPU Usage</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-cyan);" id="cpuUsage">0%</div>
+                    <div class="loading-bar"
+                        style="height: 4px; margin-top: 0.5rem; background: rgba(34, 211, 238, 0.2);">
+                        <div id="cpuBar"
+                            style="height: 100%; width: 0%; background: var(--accent-cyan); transition: width 0.3s;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RAM Usage -->
+                <div style="text-align: center; min-width: 120px;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">RAM Usage</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-purple);" id="ramUsage">0%
+                    </div>
+                    <div class="loading-bar"
+                        style="height: 4px; margin-top: 0.5rem; background: rgba(129, 140, 248, 0.2);">
+                        <div id="ramBar"
+                            style="height: 100%; width: 0%; background: var(--accent-purple); transition: width 0.3s;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chunk Progress -->
+                <div style="text-align: center; min-width: 120px;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Chunks</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);" id="chunkProgress">0/0
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -656,6 +694,29 @@
                 formData.append('file', file);
                 formData.append('response_format', 'verbose_json');
 
+                // Start progress and metrics polling BEFORE the request
+                const progressInterval = setInterval(async () => {
+                    try {
+                        // Fetch progress status
+                        const progressResp = await fetch('/status');
+                        if (progressResp.ok) {
+                            const progress = await progressResp.json();
+                            if (progress.status === 'processing') {
+                                updateProgress(progress);
+                            }
+                        }
+
+                        // Fetch metrics
+                        const metricsResp = await fetch('/metrics');
+                        if (metricsResp.ok) {
+                            const metrics = await metricsResp.json();
+                            updateMetrics(metrics);
+                        }
+                    } catch (e) {
+                        // Ignore fetch errors
+                    }
+                }, 300);
+
                 try {
                     const response = await fetch('/v1/audio/transcriptions', {
                         method: 'POST',
@@ -670,8 +731,38 @@
                 } catch (err) {
                     showToast('Critical error during neural sync.', '❌');
                 } finally {
+                    clearInterval(progressInterval);
                     setLoading(false);
                 }
+            }
+
+            function updateProgress(progress) {
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                const chunkProgress = document.getElementById('chunkProgress');
+
+                if (progress.status === 'processing') {
+                    progressBar.style.width = `${progress.progress_percent}%`;
+                    progressText.textContent = `Transcribing... ${progress.progress_percent}%`;
+                    chunkProgress.textContent = `${progress.current_chunk}/${progress.total_chunks}`;
+
+                    // Show streaming transcript
+                    if (progress.partial_text && progress.partial_text.length > 0) {
+                        resultContainer.style.display = 'block';
+                        chatOutput.innerHTML = `<div class="message-bubble" style="white-space: pre-wrap;">${progress.partial_text}</div>`;
+                        chatOutput.scrollTo({ top: chatOutput.scrollHeight, behavior: 'smooth' });
+                    }
+                } else if (progress.status === 'complete') {
+                    progressBar.style.width = '100%';
+                    progressText.textContent = 'Transcription complete!';
+                }
+            }
+
+            function updateMetrics(metrics) {
+                document.getElementById('cpuUsage').textContent = `${Math.round(metrics.cpu_percent)}%`;
+                document.getElementById('cpuBar').style.width = `${metrics.cpu_percent}%`;
+                document.getElementById('ramUsage').textContent = `${Math.round(metrics.ram_percent)}%`;
+                document.getElementById('ramBar').style.width = `${metrics.ram_percent}%`;
             }
 
             function setLoading(loading) {
