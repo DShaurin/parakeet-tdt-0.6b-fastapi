@@ -12,11 +12,23 @@ A high-performance, OpenAI-compatible local speech transcription service using t
 
 ## 📊 Benchmarks
 
-Real-world performance tested on a I7 4790 CPU , file name `story_spanish.mp3`:
--   **Audio Duration**: 41.62s
--   **Processing Time**: ~2.35s
--   **Speedup**: **17.6x** faster than real-time ⚡
--   **Real Time Factor (RTF)**: **0.057**
+Real-world performance tested on **Parakeet TDT 1.1B (ONNX INT8)**.
+
+### Speed Comparison
+
+| CPU | Audio File | Duration | Processing Time | Speedup | RTF |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **i7 12700KF** 🏆 | `story_spanish.mp3` | 41.62s | **2.18s** | **19.1x** | **0.052** |
+| i7 4790 | `story_spanish.mp3` | 41.62s | ~2.35s | 17.6x | 0.057 |
+
+### General Performance (i7 12700KF)
+
+Measured across various file lengths (5s - 10s):
+- **Average Speedup**: **17.0x** ⚡
+- **Top Speed**: **20.1x** faster than real-time
+- **Average RTF**: **0.059**
+
+*Note: Benchmarks run using local endpoint with INT8 quantization.*
 
 ## 🛠️ Installation
 
