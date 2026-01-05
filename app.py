@@ -88,6 +88,7 @@ print("=" * 50)
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "temp_uploads"
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 app.config["MAX_CONTENT_LENGTH"] = 2000 * 1024 * 1024
 
 # Progress tracking
