@@ -3,6 +3,12 @@ port = 5092
 threads = 8  # Optimized for 8 P-cores
 CHUNK_MINUTE = 3  # Target 3-minute chunks with intelligent silence-based splitting
 
+# Intelligent chunking configuration
+SILENCE_THRESHOLD = "-40dB"  # Silence detection threshold
+SILENCE_MIN_DURATION = 0.5  # Minimum silence duration in seconds
+SILENCE_SEARCH_WINDOW = 30.0  # Search window in seconds around target split point
+SILENCE_DETECT_TIMEOUT = 300  # Timeout for silence detection in seconds
+
 import sys
 
 sys.stdout = sys.stderr
@@ -115,7 +121,7 @@ def get_audio_duration(file_path: str) -> float:
         return 0.0
 
 
-def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence_duration: float = 0.5) -> List[Tuple[float, float]]:
+def detect_silence_points(file_path: str, silence_thresh: str = SILENCE_THRESHOLD, silence_duration: float = SILENCE_MIN_DURATION) -> List[Tuple[float, float]]:
     """
     Detect silence points in audio file using ffmpeg's silencedetect filter.
     
@@ -136,7 +142,7 @@ def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence
     ]
     
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=SILENCE_DETECT_TIMEOUT)
         # Parse stderr output for silence intervals
         silence_points = []
         silence_start = None
@@ -162,7 +168,7 @@ def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence
 
 
 def find_optimal_split_points(total_duration: float, target_chunk_duration: float, 
-                               silence_points: List[Tuple[float, float]], search_window: float = 30.0) -> List[float]:
+                               silence_points: List[Tuple[float, float]], search_window: float = SILENCE_SEARCH_WINDOW) -> List[float]:
     """
     Find optimal split points based on silence detection.
     
@@ -451,7 +457,7 @@ def transcribe_audio():
                     total_duration, 
                     CHUNK_DURATION_SECONDS, 
                     silence_points,
-                    search_window=30.0
+                    search_window=SILENCE_SEARCH_WINDOW
                 )
                 print(f"[{unique_id}] Optimal split points: {[f'{sp:.2f}s' for sp in split_points]}")
             else:
