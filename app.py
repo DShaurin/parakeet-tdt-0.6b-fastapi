@@ -1,7 +1,7 @@
 host = "0.0.0.0"
 port = 5092
 threads = 8  # Optimized for 8 P-cores
-CHUNK_MINITE = 5  # 5-minute chunks to improve WER accuracy
+CHUNK_MINUTE = 5  # 5-minute chunks to improve WER accuracy
 
 import sys
 
@@ -338,7 +338,7 @@ def transcribe_audio():
             ), 500
         temp_files_to_clean.append(target_wav_path)
 
-        CHUNK_DURATION_SECONDS = CHUNK_MINITE * 60
+        CHUNK_DURATION_SECONDS = CHUNK_MINUTE * 60
         total_duration = get_audio_duration(target_wav_path)
         if total_duration == 0:
             return jsonify({"error": "Cannot process audio with 0 duration"}), 400
