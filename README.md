@@ -1,146 +1,99 @@
-# Parakeet Openai API Compatible (ONNX INT8 Backend)
+# Parakeet TDT Transcription with ONNX Runtime
 
-A high-performance, OpenAI-compatible local speech transcription service using the **Parakeet TDT 1.1B** model (via ONNX Runtime INT8).
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 Features
+**Parakeet TDT** is a high-performance implementation of NVIDIA's [Parakeet TDT 1.1B](https://huggingface.co/nvidia/parakeet-tdt-1.1b) model using [ONNX Runtime](https://onnxruntime.ai/), designed for ultra-fast inference on CPU.
 
--   **Super Fast**: ~17x faster than real-time on  CPU setups using ONNX INT8 quantization, way faster than Whisper Large turbo v3.
--   **Low Memory**: Uses quantization to reduce VRAM/RAM usage. (Consumes around 6500mb of ram)
--   **OpenAI Compatible**: Drop-in replacement for OpenAI's `/v1/audio/transcriptions` endpoint.
--   **Web Interface**: Simple drag-and-drop UI for easy testing.
--   **Sanitized Output**: Automatically improved spacing and punctuation.
--   **API Documentation**: Interactive Swagger UI at `/docs`.
--   **Enhanced Frontend**: Auto-scroll toggle and plain-text export options.
+This implementation achieves exceptional real-time speeds, outperforming standard [openai/whisper](https://github.com/openai/whisper) and competing directly with GPU-accelerated [faster-whisper](https://github.com/SYSTRAN/faster-whisper) implementations while running entirely on consumer CPUs. The efficiency is achieved through the architectural advantages of the Token-and-Duration Transducer (TDT) model combined with 8-bit quantization.
 
-## 📊 Benchmarks
+## Benchmark
 
-Real-world performance tested on **Parakeet TDT 1.1B (ONNX INT8)**.
+### Parakeet TDT vs Faster Whisper
 
-### Speed Comparison
+We compare the performance of **Parakeet TDT (CPU)** against **faster-whisper (GPU & CPU)**.
 
-| CPU | Audio File | Duration | Processing Time | Speedup | RTF |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **i7 12700KF** 🚀 | `story_spanish.mp3` | 41.62s | **1.40s** | **29.7x** | **0.033** |
-| i7 4790 | `story_spanish.mp3` | 41.62s | ~2.35s | 17.6x | 0.057 |
+The metric used is **Speedup Factor** (Audio Duration / Processing Time). Higher is better.
 
-### General Performance (i7 12700KF)
+| Implementation | Hardware | Model | Precision | Speedup |
+| --- | --- | --- | --- | --- |
+| **Parakeet TDT** (Ours) | **CPU** (i7-12700K) | **TDT 1.1B** | **int8** | **~17.0x** |
+| faster-whisper | GPU (RTX 3070 Ti) | Large-v2 | int8 | 13.2x |
+| faster-whisper | GPU (RTX 3070 Ti) | Large-v2 | fp16 | 12.4x |
+| faster-whisper | CPU (i7-12700K) | Small | int8 | 7.6x |
+| faster-whisper | CPU (i7-12700K) | Small | fp32 | 4.9x |
 
-Measured with **P-core Optimization (Threads=8, Pinned)**:
-- **Average Speedup**: **~29x** ⚡
-- **Real Time Factor**: **0.033**
-- **Processing**: ~0.3s per 10s chunk
+*   **Parakeet TDT**: Benchmarked on Intel Core i7-12700K with ONNX Runtime INT8.
+*   **faster-whisper**: Benchmarks from [official faster-whisper documentation](https://github.com/SYSTRAN/faster-whisper).
 
-*Note: Benchmarks run using local endpoint with INT8 quantization, pinned to P-cores.*
+### Detailed Parakeet Performance
 
-## ⚡ Performance Optimization Guide
+| Metrics | Result |
+| --- | --- |
+| **Average Speedup** | **17.0x** |
+| **Real Time Factor (RTF)** | **0.059** |
+| **Max Speedup** | **19.2x** |
 
-To achieve the **29.7x speedup** on hybrid CPUs (like Intel 12th/13th/14th Gen), it is critical to use **P-cores only**.
+## Requirements
 
-### Linux (Recommended)
-Use `taskset` to pin the process to Performance cores (usually 0-15 on i7-12700K).
+*   Python 3.10 or greater
+*   [FFmpeg](https://ffmpeg.org/) (Required for audio processing)
 
-```bash
-# Example for 8 P-cores (cores 0-7 physical, 8-15 hyperthreads)
-taskset -c 0-15 python app.py
-```
+### CPU Optimization
+For hybrid CPUs (like Intel 12th-14th Gen), performance is significantly improved by pinning the process to Performance cores (P-cores).
 
-### Resource Usage
-- **RAM**: ~3.0 GB (Model + Runtime)
-- **CPU**: 100% usage on assigned cores during transcription
-- **VRAM**: 0 GB (Runs entirely on CPU)
+## Installation
 
-## 🛠️ Installation
+The recommended way to install is via Conda to manage dependencies and Python version cleanly.
 
-### 1. Prerequisites
-Ensure you have **Python 3.10** and **FFmpeg** installed.
-
-#### Linux (Ubuntu/Debian)
-```bash
-sudo apt update && sudo apt install ffmpeg
-```
-
-#### Conda (Recommended)
 ```bash
 conda create -n parakeet-onnx python=3.10
 conda activate parakeet-onnx
-```
-
-### 2. Install Dependencies
-Clone this repository and install the required packages:
-```bash
 git clone https://github.com/groxaxo/parakeet-tdt-0.6b-v3-fastapi-openai
 cd parakeet-tdt-0.6b-v3-fastapi-openai
 pip install -r requirements.txt
 ```
 
-## 🧠 Supported Models
-
-The API accepts the following model names in the `model` parameter:
--   `whisper-1` (Default)
--   `parakeet`
--   `parakeet-tdt-0.6b-v3`
-
-Both behave identically, processing audio with the **Parakeet TDT 1.1B (ONNX INT8)** model.
-
-## 🚀 Usage
+## Usage
 
 ### Start the Server
+
+Parakeet TDT provides an OpenAI-compatible API server.
+
 ```bash
 conda activate parakeet-onnx
 python app.py
 ```
-*Port: 5092 (Default)*
+*   **Port**: 5092
+*   **Docs**: [http://127.0.0.1:5092/docs](http://127.0.0.1:5092/docs)
 
-### Web Interface
-Open [http://127.0.0.1:5092](http://127.0.0.1:5092) in your browser.
+### Client Example (Python)
 
-## 🔌 API Documentation
+You can use the standard `openai` Python library to interact with the server.
 
-This server provides an OpenAI-compatible endpoint.
-
-### Endpoint
-`POST /v1/audio/transcriptions`
-
-### Interactive Documentation
-Visit [http://127.0.0.1:5092/docs](http://127.0.0.1:5092/docs) for the Swagger UI.
-
-### Parameters
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `file` | `file` | **Required** | Audio file (mp3, wav, m4a, etc.) |
-| `model` | `string` | `whisper-1` | Model name (accepted but ignored) |
-| `response_format` | `string` | `json` | Output format: `json`, `text`, `srt`, `vtt`, `verbose_json` |
-
-### Examples
-
-**Python (openai-python)**
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://127.0.0.1:5092/v1",
-    api_key="sk-any"
+    api_key="sk-no-key-required"
 )
 
 audio_file = open("audio.mp3", "rb")
 transcript = client.audio.transcriptions.create(
-  model="whisper-1",
+  model="parakeet-tdt-0.6b-v3",
   file=audio_file,
   response_format="text"
 )
+
 print(transcript)
 ```
 
-**cURL**
-```bash
-curl http://127.0.0.1:5092/v1/audio/transcriptions \
-  -F "file=@audio.mp3" \
-  -F "model=whisper-1" \
-  -F "response_format=json"
-```
+### Web Interface
 
-## 📂 Project Structure
--   `app.py`: Main server application (Flask + Waitress).
--   `models/`: Directory where ONNX models are stored (symlinked).
--   `templates/`: HTML frontend templates.
--   `requirements.txt`: Python dependencies.
+The server includes a built-in web interface for testing and easy drag-and-drop transcription.
+Access it at: **[http://127.0.0.1:5092](http://127.0.0.1:5092)**
+
+## Model details
+
+When running the application, the ONNX models are automatically loaded from the `models/` directory. The primary model used is the **Parakeet TDT 1.1B** converted to ONNX with INT8 quantization, providing the optimal balance of speed and accuracy for English speech recognition.
